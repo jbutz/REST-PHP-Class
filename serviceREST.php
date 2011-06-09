@@ -4,20 +4,21 @@ class clientREST
 	var $curlObj;
 	var $httpHeader;
 	
-	function _construct()
+	function __construct()
 	{
 		$this->curlObj = curl_init();
 		$this->httpHeader[] = "Cache-Control: max-age=0"; 
 		$this->httpHeader[] = "Connection: keep-alive"; 
 		$this->httpHeader[] = "Keep-Alive: 300"; 
-		curl_setopt($this->curlObj,CURL_HEADER,true);
-		curl_setopt($this->curlObj,CURL_AUTOREFERER,true);
-		curl_setopt($this->curlObj,CURL_FRESH_CONNECT,true);
+		curl_setopt($this->curlObj,CURLOPT_HEADER,false);
+		curl_setopt($this->curlObj,CURLOPT_AUTOREFERER,true);
+		curl_setopt($this->curlObj,CURLOPT_FRESH_CONNECT,true);
+		curl_setopt($this->curlObj,CURLOPT_RETURNTRANSFER,true);
 	}
 	
 	public function execRequest($httpURL,$httpMethod,$httpData)
 	{
-		curl_setopt($this->curlObj,CURL_HTTPHEADER,$this->httpHeader);
+		curl_setopt($this->curlObj,CURLOPT_HTTPHEADER,$this->httpHeader);
 		switch(strtolower($httpMethod))
 		{
 			case 'get':
@@ -34,6 +35,7 @@ class clientREST
 				break;
 		}
 		curl_setopt($this->curlObj,CURLOPT_URL,$httpURL);
+		return curl_exec($this->curlObj);
 	}
 	
 	public function setAcceptType($type)
@@ -73,7 +75,18 @@ class clientREST
 			}
 			else
 			{
-				$data = urlencode($data);
+				parse_str($data,$tmp);
+				$data = "";
+				$first = true;
+				foreach($tmp as $k => $v)
+				{
+					if(!$first)
+					{
+						$data .= "&";
+					}
+					$data .= $k . "=" . urlencode($v);
+					$first = false;
+				}
 			}
 			$url .= "?".$data;
 		}
@@ -90,7 +103,18 @@ class clientREST
 			}
 			else
 			{
-				$data = urlencode($data);
+				parse_str($data,$tmp);
+				$data = "";
+				$first = true;
+				foreach($tmp as $k => $v)
+				{
+					if(!$first)
+					{
+						$data .= "&";
+					}
+					$data .= $k . "=" . urlencode($v);
+					$first = false;
+				}
 			}
 			curl_setopt($this->curlObj,CURLOPT_POSTFIELDS,$data);
 		}
@@ -99,8 +123,9 @@ class clientREST
 	private function _put($data = null)
 	{
 		curl_setopt($this->curlObj,CURLOPT_PUT,true);
-		$resource = fopen('php://temp', 'w');
+		$resource = fopen('php://temp', 'rw');
 		$bytes = fwrite($resource,$data);
+		rewind($resource);
 		if($bytes !== false)
 		{
 			curl_setopt($this->curlObj,CURLOPT_INFILE,$resource);
@@ -117,8 +142,9 @@ class clientREST
 		curl_setopt($this->curlObj,CURLOPT_CUSTOMREQUEST,'DELETE');
 		if($data != null)
 		{
-			$resource = fopen('php://temp', 'w');
+			$resource = fopen('php://temp', 'rw');
 			$bytes = fwrite($resource,$data);
+			rewind($resource);
 			if($bytes !== false)
 			{
 				curl_setopt($this->curlObj,CURLOPT_INFILE,$resource);
@@ -130,4 +156,8 @@ class clientREST
 			}
 		}
 	}
+}
+
+$c = new clientREST();
+echo $c->execRequest('http://10.10.33.53/~jbutz/test.rest.php','put','hello=world&test=true');
 ?>
