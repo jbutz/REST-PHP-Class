@@ -158,6 +158,46 @@ class clientREST
 	}
 }
 
-$c = new clientREST();
-echo $c->execRequest('http://10.10.33.53/~jbutz/test.rest.php','put','hello=world&test=true');
+class serverREST
+{
+	var $httpQuery;
+	var $httpPath;
+	var $httpMethod;
+	var $validOutput;
+	var $functionMap;
+
+	function __construct()
+	{
+		// We have to figure out the path
+		// It is a little complicated
+		$protocol = ($_SERVER['HTTPS'] == "" || $_SERVER['HTTPS'] === 'off') ? "http" : "https";
+		$baseUri = $_SERVER['REQUEST_URI'];
+		if(!isset($_SERVER['REQUEST_URI']))
+			$baseUri = $_SERVER['PHP_SELF'];
+		$baseUri .= strpos($baseUri,$_SERVER['SCRIPT_NAME']) === 0 ? $_SERVER['SCRIPT_NAME'] : str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+		$baseUri = rtrim($baseUri, '/');
+
+		$uri = '';
+		if($_SERVER['PATH_INFO'] != "")
+			$uri = $_SERVER['PATH_INFO'];
+		else
+		{
+			if(isset($_SERVER['REQUEST_URI'])
+				$uri = parse_url($protocol.'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'],PHP_URL_PATH);
+			elseif(isset($_SERVER['PHP_SELF']))
+				$uri = $_SERVER['PHP_SELF'];
+			else
+				throw new Exception('Couldn\'t detect URI');
+		}
+		if($baseUri != "" && strpos($uri,$baseUri) === 0)
+			$uri = substr($uri, strlen($baseUri))
+		$this->httpPath    = $uri;
+		$this->validOutput = explode(','$_SERVER['HTTP_ACCEPT']);
+		$this->httpMethod  = $_SERVER['REQUEST_METHOD'];
+		$this->functionMap = array();
+	}
+}
+
+//$c = new clientREST();
+//echo $c->execRequest('http://10.10.33.53/~jbutz/test.rest.php','put','hello=world&test=true');
 ?>
