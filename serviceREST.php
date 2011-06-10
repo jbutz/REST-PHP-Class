@@ -170,11 +170,11 @@ class serverREST
 	{
 		// We have to figure out the path
 		// It is a little complicated
-		$protocol = ($_SERVER['HTTPS'] == "" || $_SERVER['HTTPS'] === 'off') ? "http" : "https";
+		$protocol = ($_SERVER['HTTPS'] == "" || $_SERVER['HTTPS'] == 'off') ? "http" : "https";
 		$baseUri = $_SERVER['REQUEST_URI'];
-		if(!isset($_SERVER['REQUEST_URI']))
+		if($_SERVER['REQUEST_URI'] == "")
 			$baseUri = $_SERVER['PHP_SELF'];
-		$baseUri .= strpos($baseUri,$_SERVER['SCRIPT_NAME']) === 0 ? $_SERVER['SCRIPT_NAME'] : str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+		$baseUri .= strpos($baseUri,$_SERVER['SCRIPT_NAME']) == 0 ? $_SERVER['SCRIPT_NAME'] : str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 		$baseUri = rtrim($baseUri, '/');
 
 		$uri = '';
@@ -182,20 +182,42 @@ class serverREST
 			$uri = $_SERVER['PATH_INFO'];
 		else
 		{
-			if(isset($_SERVER['REQUEST_URI'])
+			if($_SERVER['REQUEST_URI'] == "")
 				$uri = parse_url($protocol.'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'],PHP_URL_PATH);
-			elseif(isset($_SERVER['PHP_SELF']))
+			elseif($_SERVER['PHP_SELF'] == "")
 				$uri = $_SERVER['PHP_SELF'];
 			else
-				throw new Exception('Couldn\'t detect URI');
+				throw new Exception("Couldn't detect path.");
 		}
-		if($baseUri != "" && strpos($uri,$baseUri) === 0)
-			$uri = substr($uri, strlen($baseUri))
+		if($baseUri != "" && strpos($uri,$baseUri) == 0)
+			$uri = substr($uri, strlen($baseUri));
 		$this->httpPath    = $uri;
 		$this->validOutput = explode(','$_SERVER['HTTP_ACCEPT']);
 		$this->httpMethod  = $_SERVER['REQUEST_METHOD'];
 		$this->functionMap = array();
 	}
+
+	public function addFunction($functionName, $method)
+	{
+		$path = func_get_args();
+		unset($path[0]); // Remove the function name
+		unset($path[1]); // Remove the method
+		$path = implode("/",$path);
+		$path = "/".rtrim($path,"/");
+		$this->functionMap[$path][$method] = $functionName;
+		return true;
+	}
+
+	public function addObject($className)
+	{
+		$path = func_get_args();
+		unset($path[0]); // Remove the function name
+		$path = implode("/",$path);
+		$path = "/".rtrim($path,"/");
+		$this->functionMap[$path] = $className;
+		return true;
+	}
+
 }
 
 //$c = new clientREST();
