@@ -170,56 +170,132 @@ class serverREST
 	{
 		// We have to figure out the path
 		// It is a little complicated
-		$protocol = ($_SERVER['HTTPS'] == "" || $_SERVER['HTTPS'] == 'off') ? "http" : "https";
-		$baseUri = $_SERVER['REQUEST_URI'];
-		if($_SERVER['REQUEST_URI'] == "")
-			$baseUri = $_SERVER['PHP_SELF'];
-		$baseUri .= strpos($baseUri,$_SERVER['SCRIPT_NAME']) == 0 ? $_SERVER['SCRIPT_NAME'] : str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+		$protocol = (array_key_exists('HTTPS',$_SERVER) && ($_SERVER['HTTPS'] != "" || $_SERVER['HTTPS'] != 'off')) ? "https" : "http";
+		$rUri = $_SERVER['REQUEST_URI'];
+		if(!array_key_exists('REQUEST_URI',$_SERVER) || $_SERVER['REQUEST_URI'] == "")
+			$rUri = $_SERVER['PHP_SELF'];
+		$baseUri = strpos($rUri,$_SERVER['SCRIPT_NAME']) === 0 ? $_SERVER['SCRIPT_NAME'] : str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 		$baseUri = rtrim($baseUri, '/');
-
 		$uri = '';
-		if($_SERVER['PATH_INFO'] != "")
+		if(array_key_exists('PATH_INFO',$_SERVER) && $_SERVER['PATH_INFO'] != "")
 			$uri = $_SERVER['PATH_INFO'];
 		else
 		{
-			if($_SERVER['REQUEST_URI'] == "")
+			if($_SERVER['REQUEST_URI'] != "")
 				$uri = parse_url($protocol.'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'],PHP_URL_PATH);
 			elseif($_SERVER['PHP_SELF'] == "")
 				$uri = $_SERVER['PHP_SELF'];
 			else
 				throw new Exception("Couldn't detect path.");
 		}
-		if($baseUri != "" && strpos($uri,$baseUri) == 0)
-			$uri = substr($uri, strlen($baseUri));
+		if($baseUri != "" && strpos($uri,$baseUri) === 0)
+			$uri = substr($uri,strlen($baseUri));
+		$uri = trim($uri,'/');
 		$this->httpPath    = $uri;
-		$this->validOutput = explode(','$_SERVER['HTTP_ACCEPT']);
+		$this->validOutput = explode(',',substr($_SERVER['HTTP_ACCEPT'],0,strpos($_SERVER['HTTP_ACCEPT'],';')));
 		$this->httpMethod  = $_SERVER['REQUEST_METHOD'];
 		$this->functionMap = array();
 	}
 
-	public function addFunction($functionName, $method)
+	public function addFunction($functionName, $method, $path)
 	{
-		$path = func_get_args();
-		unset($path[0]); // Remove the function name
-		unset($path[1]); // Remove the method
-		$path = implode("/",$path);
-		$path = "/".rtrim($path,"/");
-		$this->functionMap[$path][$method] = $functionName;
+		$path = trim($path,"/");
+		$this->functionMap[$path][strtoupper($method)] = $functionName;
 		return true;
 	}
 
-	public function addObject($className)
+	public function addObject($className, $path)
 	{
-		$path = func_get_args();
-		unset($path[0]); // Remove the function name
-		$path = implode("/",$path);
-		$path = "/".rtrim($path,"/");
+		$path = trim($path,"/");
 		$this->functionMap[$path] = $className;
 		return true;
 	}
+	
+	public function execServer()
+	{
+	}
 
+	private function _httpStatus($statusCode)
+	{
+		// HTTP Response Codes
+		$codes = Array(
+				100 => 'Continue',
+				101 => 'Switching Protocols',
+				200 => 'OK',
+				201 => 'Created',
+				202 => 'Accepted',
+				203 => 'Non-Authoritative Information',
+				204 => 'No Content',
+				205 => 'Reset Content',
+				206 => 'Partial Content',
+				300 => 'Multiple Choices',
+				301 => 'Moved Permanently',
+				302 => 'Found',
+				303 => 'See Other',
+				304 => 'Not Modified',
+				305 => 'Use Proxy',
+				306 => '(Unused)',
+				307 => 'Temporary Redirect',
+				400 => 'Bad Request',
+				401 => 'Unauthorized',
+				402 => 'Payment Required',
+				403 => 'Forbidden',
+				404 => 'Not Found',
+				405 => 'Method Not Allowed',
+				406 => 'Not Acceptable',
+				407 => 'Proxy Authentication Required',
+				408 => 'Request Timeout',
+				409 => 'Conflict', 
+				410 => 'Gone',
+				411 => 'Length Required',
+				412 => 'Precondition Failed',
+				413 => 'Request Entity Too Large',
+				414 => 'Request-URI Too Long',
+				415 => 'Unsupported Media Type',
+				416 => 'Requested Range Not Satisfiable',
+				417 => 'Expectation Failed',
+				500 => 'Internal Server Error',
+				501 => 'Not Implemented',
+				502 => 'Bad Gateway',
+				503 => 'Service Unavailable',
+				504 => 'Gateway Timeout',
+				505 => 'HTTP Version Not Supported');
+		if(array_key_exists($statusCode,$codes))
+			return $codes[$statusCode];
+		else
+			throw new Exception("Invalid HTTP Status Code");
+	}
+
+	private function _output($statusCode, $data, $type = null)
+	{
+		$outputGood = true;
+		if($type != null)
+		{
+
+			if(!in_array($type,$this->validOutput))
+			{
+				$found = false;
+				foreach($this->validOutput as $v)
+				{
+					$t = explode('/',$v);
+					if($t[1] == $v)
+						$found = true;
+				}
+				$outputGood = $found;
+			}
+		}
+
+		$statusText = $_this->_httpStatus($statusCode);
+		if($data == "" || $data == null)
+		{
+			$data = "<html><head><title>$statusCode $statusText</title></head><body></body></html>";
+		}
+	}
 }
 
-//$c = new clientREST();
-//echo $c->execRequest('http://10.10.33.53/~jbutz/test.rest.php','put','hello=world&test=true');
+$c = new serverREST();
+$c->addFunction("helloWorld","GET","/hello/world/");
+$c->addFunction("helloWorldPost","post","hello/world");
+//$c->addObject("helloWorldObj","hello/world");
+print_r($c);
 ?>
