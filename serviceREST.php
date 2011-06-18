@@ -269,6 +269,7 @@ class serverREST
 	private function _output($statusCode, $data, $type = null)
 	{
 		$outputGood = true;
+		$changed = false;
 		if($type != null)
 		{
 
@@ -279,17 +280,45 @@ class serverREST
 				{
 					$t = explode('/',$v);
 					if($t[1] == $v)
+					{
 						$found = true;
+						$type = $v;
+						$changed = true;
+					}
 				}
 				$outputGood = $found;
 			}
 		}
-
+		if(!$outputGood)
+		{
+			throw new Exception("Data type not expected by client");
+		}
 		$statusText = $_this->_httpStatus($statusCode);
 		if($data == "" || $data == null)
 		{
 			$data = "<html><head><title>$statusCode $statusText</title></head><body></body></html>";
 		}
+		
+		if($changed)
+		{
+			header("Content-type: $changed");
+		}
+		elseif(is_array($data))
+		{
+			$data = json_encode($data);
+			header('Content-type: application/json');
+		}
+		elseif(strip_tags($data) != $data)
+		{
+			header('Content-type: text/html');
+		}
+		else
+		{
+			header('Content-type: text/plain',false);
+		}
+
+		header("HTTP/1.1 $statusCode $statusText");
+		echo $data;
 	}
 }
 
