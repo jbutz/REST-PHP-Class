@@ -213,6 +213,36 @@ class serverREST
 	
 	public function execServer()
 	{
+		if(array_key_exists(trim($this->httpPath,'/'),$this->functionMap))
+		{
+			// We have a function mapped there!
+			$map = $this->functionMap[trim($this->httpPath)];
+			// If it is an array then we are dealing with a function
+			//		otherwise it is an object
+			$dataArr = array(
+					'method' => strtoupper($this->httpMethod),
+					'path'   => trim($this->httpPath,'/'),
+					'query'  => $this->httpQuery);
+			if(is_array($map))
+			{
+				$f = $map[strtoupper($this->httpMethod)];
+				$tmp = $f($dataArr);
+			}
+			else
+			{
+				$obj = new $map();
+				$tmp = $obj->run($dataArr);
+			}
+		}
+		else
+		{
+			$statusCode = "500";
+			$data = "";
+			$type = null;
+			$return = false;
+		}
+		$this->_output($statusCode,$data,$type);
+		return $return;
 	}
 
 	private function _httpStatus($statusCode)
