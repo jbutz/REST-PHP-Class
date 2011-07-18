@@ -195,6 +195,19 @@ class serverREST
 		$this->validOutput = explode(',',substr($_SERVER['HTTP_ACCEPT'],0,strpos($_SERVER['HTTP_ACCEPT'],';')));
 		$this->httpMethod  = $_SERVER['REQUEST_METHOD'];
 		$this->functionMap = array();
+		switch(strtoupper($this->httpMethod))
+		{
+			case 'GET':
+				$this->httpQuery = $_GET;
+				break;
+			case 'POST':
+				$this->httpQuery = $_POST;
+				break;
+			case 'PUT':
+			case 'DELETE':
+				$this->httpQuery = file_get_contents('php://input');
+				break;
+		}
 	}
 
 	public function addFunction($functionName, $method, $path)
@@ -233,6 +246,10 @@ class serverREST
 				$obj = new $map();
 				$tmp = $obj->run($dataArr);
 			}
+			$statusCode = $tmp['statusCode'];
+			$data = $tmp['data'];
+			$type = $tmp['type'];
+			$return = true;
 		}
 		else
 		{
@@ -323,7 +340,7 @@ class serverREST
 		{
 			throw new Exception("Data type not expected by client");
 		}
-		$statusText = $_this->_httpStatus($statusCode);
+		$statusText = $this->_httpStatus($statusCode);
 		if($data == "" || $data == null)
 		{
 			$data = "<html><head><title>$statusCode $statusText</title></head><body></body></html>";
@@ -352,9 +369,11 @@ class serverREST
 	}
 }
 
+/*
 $c = new serverREST();
 $c->addFunction("helloWorld","GET","/hello/world/");
 $c->addFunction("helloWorldPost","post","hello/world");
 //$c->addObject("helloWorldObj","hello/world");
 print_r($c);
+*/
 ?>

@@ -1,0 +1,4 @@
+RewriteEngine On
+ReWriteBase /~jbutz/rest
+RewriteCond %{REQUEST_FILENAME} !-F
+RewriteRule ^(.*)$ REST.php?%{QUERY_STRING} [L]
