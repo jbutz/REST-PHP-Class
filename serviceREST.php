@@ -341,7 +341,7 @@ class serverREST
 			throw new Exception("Data type not expected by client");
 		}
 		$statusText = $this->_httpStatus($statusCode);
-		if($data == "" || $data == null)
+		if(!is_array($data) &&($data == "" || $data == null)) // Sometimes we want empty JSON
 		{
 			$data = "<html><head><title>$statusCode $statusText</title></head><body></body></html>";
 		}
